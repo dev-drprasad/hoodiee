@@ -1,0 +1,17 @@
+name: KickAss Torrents
+url: https://katcr.to
+search:
+  path: https://katcr.to/usearch/{{.query}}
+  list:
+    selector: table.frontPageWidget tr
+    fields:
+      url:
+        selector: td:nth-child(1) div.torrentname a.cellMainLink
+        attr: href
+  details:
+    fields:
+      name:
+        selector: table#mainDetailsTable h1
+      magnet:
+        selector: table#mainDetailsTable .downloadButtonGroup a[href^=\"magnet:\"]
+        attr: href

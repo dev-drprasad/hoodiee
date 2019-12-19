@@ -1,133 +1,94 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
+	"reflect"
 	"strconv"
 	"time"
 
-	"github.com/dev-drprasad/rest-api/mag2tor"
+	"github.com/dev-drprasad/rest-api/utils"
 	"github.com/gocolly/colly"
 	"github.com/gorilla/mux"
+	"gopkg.in/yaml.v2"
 )
 
-type event struct {
-	ID          string `json:"ID"`
-	Title       string `json:"Title"`
-	Description string `json:"Description"`
+type Selector struct {
+	Selector string `yaml:"selector"`
+	Attr     string `yaml:"attr"`
 }
 
-type TorrentResult struct {
+type Fields struct {
+	Name      Selector `yaml:"name"`
+	MagnetURI Selector `yaml:"magnet"`
+	URL       Selector `yaml:"url"`
+	Seeders   Selector `yaml:"seeders"`
+	Leechers  Selector `yaml:"leechers"`
+}
+
+type Definition struct {
+	Name   string `yaml:"name"`
+	URL    string `yaml:"url"`
+	Search struct {
+		Path string `yaml:"path"`
+		List struct {
+			Fields   Fields `yaml:"fields"`
+			Selector string `yaml:"selector"`
+			Attr     string `yaml:"attr"`
+		} `yaml:"list"`
+		Detail *struct {
+			Fields Fields `yaml:"fields"`
+		} `yaml:"details"`
+	} `yaml:"search"`
+}
+
+type TorrentInfo struct {
 	Name      string `json:"name"`
-	MagnetURL string `json:"magnetURL"`
-}
-
-type allEvents []event
-
-var events = allEvents{
-	{
-		ID:          "1",
-		Title:       "Introduction to Golang",
-		Description: "Come join us for a chance to learn how golang works and get to eventually try it out",
-	},
+	MagnetURI string `json:"magnetURL"`
+	URL       string `json:"URL"`
+	Seeders   string `json:"seeders"`
+	Leechers  string `json:"leechers"`
 }
 
 func homeLink(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Welcome home!")
 }
 
-func createEvent(w http.ResponseWriter, r *http.Request) {
-	var newEvent event
-	reqBody, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		fmt.Fprintf(w, "Kindly enter data with the event title and description only in order to update")
-	}
-
-	json.Unmarshal(reqBody, &newEvent)
-	events = append(events, newEvent)
-	w.WriteHeader(http.StatusCreated)
-
-	json.NewEncoder(w).Encode(newEvent)
-}
-
-func getOneEvent(w http.ResponseWriter, r *http.Request) {
-	eventID := mux.Vars(r)["id"]
-
-	for _, singleEvent := range events {
-		if singleEvent.ID == eventID {
-			json.NewEncoder(w).Encode(singleEvent)
-		}
-	}
-}
-
-func getAllEvents(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(events)
-}
-
-func updateEvent(w http.ResponseWriter, r *http.Request) {
-	eventID := mux.Vars(r)["id"]
-	var updatedEvent event
-
-	reqBody, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		fmt.Fprintf(w, "Kindly enter data with the event title and description only in order to update")
-	}
-	json.Unmarshal(reqBody, &updatedEvent)
-
-	for i, singleEvent := range events {
-		if singleEvent.ID == eventID {
-			singleEvent.Title = updatedEvent.Title
-			singleEvent.Description = updatedEvent.Description
-			events = append(events[:i], singleEvent)
-			json.NewEncoder(w).Encode(singleEvent)
-		}
-	}
-}
-
-func deleteEvent(w http.ResponseWriter, r *http.Request) {
-	eventID := mux.Vars(r)["id"]
-
-	for i, singleEvent := range events {
-		if singleEvent.ID == eventID {
-			events = append(events[:i], events[i+1:]...)
-			fmt.Fprintf(w, "The event with ID %v has been deleted successfully", eventID)
-		}
-	}
-}
-
-func handleMag2Tor(w http.ResponseWriter, r *http.Request) {
-	magnetURI := r.URL.Query().Get("magnetURI")
-	log.Printf("magnetURI: %s", magnetURI)
-	filename := mag2tor.Mag2Tor(magnetURI)
-	data, err := ioutil.ReadFile(filename)
-	if err != nil {
-		log.Printf("error reading file %s, %s", filename, err)
-	}
-	w.Header().Add("Content-Disposition", "attachment; filename=\""+filename+"\"")
-	http.ServeContent(w, r, filename, time.Now(), bytes.NewReader(data))
-}
+// func handleMag2Tor(w http.ResponseWriter, r *http.Request) {
+// 	magnetURI := r.URL.Query().Get("magnetURI")
+// 	log.Printf("magnetURI: %s", magnetURI)
+// 	filename := mag2tor.Mag2Tor(magnetURI)
+// 	data, err := ioutil.ReadFile(filename)
+// 	if err != nil {
+// 		log.Printf("error reading file %s, %s", filename, err)
+// 	}
+// 	w.Header().Add("Content-Disposition", "attachment; filename=\""+filename+"\"")
+// 	http.ServeContent(w, r, filename, time.Now(), bytes.NewReader(data))
+// }
 
 func tpb(w http.ResponseWriter, r *http.Request) {
 	c := colly.NewCollector()
 
 	// Find and visit all links
 	c.OnHTML("table#searchResult", func(e *colly.HTMLElement) {
-		m := []TorrentResult{}
+		m := []TorrentInfo{}
 		e.ForEach("tr", func(i int, e *colly.HTMLElement) {
 			magnetURL := e.ChildAttr("td:nth-child(2) a[href^=\"magnet:\"]", "href")
 			name := e.ChildText("td:nth-child(2) div.detName")
 			log.Println(name, magnetURL)
-			m = append(m, TorrentResult{Name: name, MagnetURL: magnetURL})
+			m = append(m, TorrentInfo{Name: name, MagnetURI: magnetURL})
 		})
 		json.NewEncoder(w).Encode(m)
 	})
 
 	c.OnRequest(func(r *colly.Request) {
-		fmt.Println("Visiting", r.URL)
+		log.Println("Visiting", r.URL)
+		r.Headers.Set("Accept", "text/html")
+		r.Headers.Set("Accept-Encoding", "gzip")
 	})
 
 	log.Println("visiting URL...")
@@ -136,8 +97,8 @@ func tpb(w http.ResponseWriter, r *http.Request) {
 
 func kickasstorrent(w http.ResponseWriter, r *http.Request) {
 	c := colly.NewCollector()
-	c.UserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.3998.0 Safari/537.36"
-
+	// c.UserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.3998.0 Safari/537.36"
+	c.UserAgent = "Mozilla/5.0 (Linux; Android 9; SM-G960F Build/PPR1.180610.011; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/74.0.3729.157 Mobile Safari/537.36"
 	dc := c.Clone()
 
 	dc.Limit(&colly.LimitRule{
@@ -145,13 +106,13 @@ func kickasstorrent(w http.ResponseWriter, r *http.Request) {
 		Delay:       2 * time.Second,
 	})
 
-	m := []TorrentResult{}
+	m := []TorrentInfo{}
 	// Find and visit all links
 	dc.OnHTML("table#mainDetailsTable", func(e *colly.HTMLElement) {
 		magnetURL := e.ChildAttr(".downloadButtonGroup a[href^=\"magnet:\"]", "href")
 		name := e.ChildText("h1")
 		log.Println(name, magnetURL)
-		m = append(m, TorrentResult{Name: name, MagnetURL: magnetURL})
+		m = append(m, TorrentInfo{Name: name, MagnetURI: magnetURL})
 	})
 
 	c.OnHTML("table.frontPageWidget", func(e *colly.HTMLElement) {
@@ -167,11 +128,20 @@ func kickasstorrent(w http.ResponseWriter, r *http.Request) {
 
 	c.OnRequest(func(r *colly.Request) {
 		fmt.Println("Visiting", r.URL)
+		r.Headers.Set("Accept", "text/html")
+		r.Headers.Set("Accept-Encoding", "gzip")
+
 	})
 
 	c.OnError(func(r *colly.Response, err error) {
+		log.Printf("response: %s", string(r.Body))
 		log.Println("error:", r.StatusCode, err)
 		w.WriteHeader(500)
+	})
+
+	c.OnScraped(func(r *colly.Response) {
+		log.Println("Completed")
+		json.NewEncoder(w).Encode(m)
 	})
 
 	dc.OnError(func(r *colly.Response, err error) {
@@ -182,33 +152,191 @@ func kickasstorrent(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Visiting", r.URL)
 	})
 
+	log.Println("visiting URL...")
+	c.Visit("https://katcr.to/usearch/game%20of")
+}
+
+// func (f )
+
+func loadDefinition(site string) *Definition {
+	f, err := ioutil.ReadFile("definitions/" + site + ".yaml")
+	if err != nil {
+		log.Printf("error reading definition %s: %s", site, err)
+		return nil
+	}
+	d := &Definition{}
+	err = yaml.Unmarshal(f, &d)
+	if err != nil {
+		log.Fatalf("Unmarshal: %v", err)
+		return nil
+	}
+	log.Printf("%v", d)
+	return d
+}
+
+func search(w http.ResponseWriter, r *http.Request) {
+	site := r.URL.Query().Get("site")
+	query := r.URL.Query().Get("query")
+	if site == "" || query == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	// f, err := os.Open("definitions/" + site + ".yaml")
+
+	d := loadDefinition(site)
+
+	u, _ := url.Parse(d.URL)
+	searchURL := utils.ProcessString(d.Search.Path, map[string]string{"query": query})
+	searchAbsURL := d.URL + searchURL
+	log.Printf("searchAbsURL %s", searchAbsURL)
+
+	m := []TorrentInfo{}
+
+	c := colly.NewCollector()
+	// c.UserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.3998.0 Safari/537.36"
+	c.UserAgent = "Mozilla/5.0 (Linux; Android 9; SM-G960F Build/PPR1.180610.011; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/74.0.3729.157 Mobile Safari/537.36"
+
+	log.Printf("host: %s", u.Host)
+
+	var dc *colly.Collector
+	if d.Search.Detail != nil {
+		dc = c.Clone()
+
+		dc.Limit(&colly.LimitRule{
+			Parallelism: 2,
+			Delay:       3 * time.Second,
+		})
+
+		dc.OnRequest(func(r *colly.Request) {
+			fmt.Println("Visiting", r.URL)
+		})
+
+		dc.OnError(func(r *colly.Response, err error) {
+			log.Println("error:", r.StatusCode, err)
+			w.WriteHeader(500)
+		})
+
+	}
+
+	c.OnHTML("body", func(e *colly.HTMLElement) {
+		// log.Println(e.Text)
+		log.Printf("list selector: %s", d.Search.List.Selector)
+		e.ForEach(d.Search.List.Selector, func(i int, e *colly.HTMLElement) {
+			// log.Println(string(e.Response.Body))
+
+			fieldValues := reflect.ValueOf(d.Search.List.Fields)
+			typeOfDefinition := fieldValues.Type()
+
+			ti := TorrentInfo{}
+			tis := reflect.ValueOf(&ti).Elem()
+
+			for i := 0; i < fieldValues.NumField(); i++ {
+				sel := fieldValues.Field(i).Interface().(Selector)
+				fieldName := typeOfDefinition.Field(i).Name
+				log.Printf("%v", sel)
+				log.Printf("%s", fieldName)
+
+				var parsed string
+				if sel.Attr != "" {
+					parsed = e.ChildAttr(sel.Selector, sel.Attr)
+				} else {
+					parsed = e.ChildText(sel.Selector)
+				}
+
+				// exported field
+				tif := tis.FieldByName(fieldName)
+				if tif.IsValid() {
+					// A Value can be changed only if it is
+					// addressable and was not obtained by
+					// the use of unexported struct fields.
+					if tif.CanSet() {
+						// change value of N
+						switch tif.Kind() {
+						case reflect.Int:
+							pn, _ := strconv.Atoi(parsed)
+							tif.SetInt(int64(pn))
+						case reflect.String:
+							tif.SetString(parsed)
+						default:
+						}
+					}
+				} else {
+					log.Printf("Field '%s' is not valid", fieldName)
+				}
+
+			}
+
+			ti.URL = e.Request.AbsoluteURL(ti.URL)
+			log.Printf("%#v", ti)
+
+			m = append(m, ti)
+			idx := len(m) - 1
+
+			if d.Search.Detail != nil {
+				dc.OnHTML("body", func(e *colly.HTMLElement) {
+
+					if d.Search.Detail.Fields.MagnetURI.Selector != "" {
+						log.Printf("d.Search.Detail.Fields.MagnetURI.Selector %s", d.Search.Detail.Fields.MagnetURI.Selector)
+						var magnetURI string
+						if d.Search.Detail.Fields.MagnetURI.Attr != "" {
+							magnetURI = e.ChildAttr(d.Search.Detail.Fields.MagnetURI.Selector, d.Search.Detail.Fields.MagnetURI.Attr)
+						} else {
+							magnetURI = e.ChildText(d.Search.Detail.Fields.MagnetURI.Selector)
+						}
+
+						m[idx].MagnetURI = magnetURI
+					}
+
+					if d.Search.Detail.Fields.Name.Selector != "" {
+						var name string
+						if d.Search.Detail.Fields.Name.Attr != "" {
+							name = e.ChildAttr(d.Search.Detail.Fields.Name.Selector, d.Search.Detail.Fields.Name.Attr)
+						} else {
+							name = e.ChildText(d.Search.Detail.Fields.Name.Selector)
+						}
+						m[idx].Name = name
+					}
+					log.Printf("%d", idx)
+					// log.Printf("%v", m[idx])
+				})
+				log.Printf("visiting detail... %d", idx)
+				dc.Visit(ti.URL)
+				log.Printf("detaching detail %d", idx)
+				dc.OnHTMLDetach("body")
+			}
+		})
+
+	})
+
+	c.OnRequest(func(r *colly.Request) {
+		fmt.Println("Visiting", r.URL)
+		r.Headers.Set("Accept", "text/html")
+		r.Headers.Set("Accept-Encoding", "gzip")
+		r.Headers.Set("Host", u.Host)
+	})
+
+	c.OnError(func(r *colly.Response, err error) {
+		log.Println("Request Error: ", err, "Code: ", r.StatusCode)
+		w.WriteHeader(500)
+	})
+
 	c.OnScraped(func(r *colly.Response) {
 		log.Println("Completed")
 		json.NewEncoder(w).Encode(m)
 	})
 
-	log.Println("visiting URL...")
-	c.Visit("https://katcr.to/usearch/game%20of")
+	log.Printf("%v", d.Search.Detail)
+
+	c.Visit(searchAbsURL)
 }
 
 func main() {
-	// initEvents()
 	router := mux.NewRouter().StrictSlash(true)
-	magnetLink := "magnet:?xt=urn:btih:bac2c9d9c552ab2465485fd37c11877f9af051db&dn=Rick and Morty S04E03 One Crew Over The Crewcoos Morty 1080p AMZN WEBRip DDP5 1 x264 CtrlHD [rartv]&tr=udp://tracker.coppersurfer.tk:6969&tr=udp://tracker.opentrackr.org:1337&tr=udp://tracker.pirateparty.gr:6969&tr=udp://9.rarbg.to:2710&tr=udp://9.rarbg.me:2710"
-	// re := regexp.MustCompile(`xt=urn:btih:([^&/]+)`)
-	// fmt.Printf("%q\n", re.Find([]byte(magnetLink)))
-	tc := "d10:magnet-uri" + strconv.Itoa(len(magnetLink)) + ":" + magnetLink + "e"
 
-	ioutil.WriteFile("filename.torrent", []byte(tc), 0644)
-
-	router.HandleFunc("/", homeLink)
-	router.HandleFunc("/event", createEvent).Methods("POST")
-	router.HandleFunc("/events", getAllEvents).Methods("GET")
-	router.HandleFunc("/events/{id}", getOneEvent).Methods("GET")
-	router.HandleFunc("/events/{id}", updateEvent).Methods("PATCH")
-	router.HandleFunc("/events/{id}", deleteEvent).Methods("DELETE")
 	router.HandleFunc("/tpb", tpb).Methods("GET")
 	router.HandleFunc("/kat", kickasstorrent).Methods("GET")
-	router.HandleFunc("/mag2tor", handleMag2Tor).Methods("GET")
+	// router.HandleFunc("/mag2tor", handleMag2Tor).Methods("GET")
+	router.HandleFunc("/search", search).Methods("GET")
+	log.Println("Starting app...")
 	log.Fatal(http.ListenAndServe(":8080", router))
 }

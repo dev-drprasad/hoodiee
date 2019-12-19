@@ -1,0 +1,25 @@
+  name: 1337x
+  url: https://1337x.to
+  search:
+    path: "/search/{{.query}}/1/"
+    list:
+      selector: tr:has(a[href^="/torrent/"])
+      fields:
+        name:
+          selector: td[class^="coll-1"] a[href^="/torrent/"]
+        date:
+          selector: td[class^="coll-date"]:contains(":")
+        size:
+          selector: td[class^="coll-4"]
+        seeders:
+          selector: td[class~="seeds"]
+        leechers:
+          selector: td[class~="leeches"]
+        url:
+          selector: td[class^="coll-1"] a[href^="/torrent/"]
+          attr: href
+      # details:
+      #   fields:
+      #     magnet:
+      #       selector: td[class^="coll-1"] a[href^="/torrent/"]
+      #       attr: href
