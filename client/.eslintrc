@@ -1,0 +1,16 @@
+{
+  "extends": "react-app",
+  "plugins": [
+    "prettier"
+  ],
+  "rules": {
+    "prettier/prettier": "error"
+  },
+  "globals": {
+    "INIT": true,
+    "LOADING": true,
+    "SUCCESS": true,
+    "ERROR": true,
+    "PRIMARY_COLOR": true
+  }
+}
