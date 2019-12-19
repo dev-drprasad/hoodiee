@@ -2,3 +2,10 @@
 **/*.db
 
 **/.vscode
+
+**/build
+
+
+**/node_modules
+
+**/*.log
