@@ -7,7 +7,7 @@ import (
 )
 
 func TestSum(t *testing.T) {
-	d := loadDefinition("1337x")
+	d := getSiteDefinition("1337x")
 	v := reflect.ValueOf(d.Search.List.Fields)
 	typeOfDefinition := v.Type()
 

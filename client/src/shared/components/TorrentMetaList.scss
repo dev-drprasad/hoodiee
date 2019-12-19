@@ -1,0 +1,23 @@
+.meta-list {
+  .meta-list-item {
+    display: grid;
+    grid-template:
+      "name name name name" auto
+      "seeders leechers . magnet-uri" auto / 1fr 1fr 3fr 1fr;
+    padding: 16px;
+    margin-bottom: 16px;
+    .name {
+      grid-area: name;
+    }
+    .seeders {
+      grid-area: seeders;
+    }
+    .leechers {
+      grid-area: leechers;
+    }
+    .magnet-uri {
+      grid-area: magnet-uri;
+      justify-self: right;
+    }
+  }
+}

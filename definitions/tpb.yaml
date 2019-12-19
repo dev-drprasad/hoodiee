@@ -1,0 +1,31 @@
+name: The Pirate Bay
+url: https://piratebay.live
+proxies:
+  - https://pirateproxy.live
+  - https://pirateproxy.onl
+  - https://thepiratebay.zone
+  - https://piratebaylive.com
+search:
+  path: "/search/{{.query}}"
+  list:
+    selector: table#searchResult tr
+    fields:
+      magnet:
+        selector: td:nth-child(2) a[href^="magnet:"]
+        attr: href
+      name:
+        selector: td:nth-child(2) div.detName a
+      date:
+        selector: td[class^="coll-date"]:contains(":")
+      seeders:
+        selector: td:nth-child(3)
+      leechers:
+        selector: td:nth-child(4)
+      url:
+        selector: td:nth-child(2) div.detName a
+        attr: href
+    # details:
+    #   fields:
+    #     magnet:
+    #       selector: td[class^="coll-1"] a[href^="/torrent/"]
+    #       attr: href
