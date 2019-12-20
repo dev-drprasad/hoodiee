@@ -35,6 +35,7 @@ type Fields struct {
 }
 
 type Definition struct {
+	ID     string `yaml:"id"`
 	Name   string `yaml:"name"`
 	URL    string `yaml:"url"`
 	Search struct {
@@ -56,6 +57,7 @@ type TorrentInfo struct {
 	URL       string `json:"URL"`
 	Seeders   string `json:"seeders"`
 	Leechers  string `json:"leechers"`
+	Source    string `json:"source"`
 }
 
 func homeLink(w http.ResponseWriter, r *http.Request) {
@@ -174,13 +176,14 @@ func getSiteDefinition(site string) *Definition {
 		log.Fatalf("Unmarshal: %v", err)
 		return nil
 	}
+	d.ID = site
 	log.Printf("%v", d)
 	return d
 }
 
 func scrapeDetails(site string, detailURL string) (TorrentInfo, error) {
 	config := getSiteDefinition(site)
-	ti := TorrentInfo{}
+	ti := TorrentInfo{Source: config.ID}
 
 	if config.Search.Detail == nil || config.Search.Detail.Fields == nil {
 		return ti, errors.New("No Fields defined in config file")
@@ -318,7 +321,7 @@ func search(w http.ResponseWriter, r *http.Request) {
 			fieldValues := reflect.ValueOf(d.Search.List.Fields)
 			typeOfDefinition := fieldValues.Type()
 
-			ti := TorrentInfo{}
+			ti := TorrentInfo{Source: d.ID}
 			tis := reflect.ValueOf(&ti).Elem()
 
 			for i := 0; i < fieldValues.NumField(); i++ {

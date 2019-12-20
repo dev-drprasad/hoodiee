@@ -18,8 +18,8 @@ search:
       url:
         selector: td[class^="coll-1"] a[href^="/torrent/"]
         attr: href
-    # details:
-    #   fields:
-    #     magnet:
-    #       selector: td[class^="coll-1"] a[href^="/torrent/"]
-    #       attr: href
+    details:
+      fields:
+        magnet:
+          selector: td[class^="coll-1"] a[href^="/torrent/"]
+          attr: href
