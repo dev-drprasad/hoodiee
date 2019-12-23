@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/dev-drprasad/rest-api/scraper"
 )
 
 func TestSum(t *testing.T) {
@@ -12,7 +14,7 @@ func TestSum(t *testing.T) {
 	typeOfDefinition := v.Type()
 
 	for i := 0; i < v.NumField(); i++ {
-		s := v.Field(i).Interface().(Selector)
+		s := v.Field(i).Interface().(scraper.Selector)
 		n := typeOfDefinition.Field(i).Name
 		fmt.Printf("%v", s)
 		fmt.Printf("%s", n)

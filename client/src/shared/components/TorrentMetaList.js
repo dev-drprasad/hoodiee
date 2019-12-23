@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from "react";
-import "./TorrentMetaList.scss";
 import { useFetch } from "@shared/hooks";
 import { API_BASE_URL } from "@shared/consts";
 import StatusHandler from "./StatusHandler";
 import Spinner from "./Spinner";
+import { mergeStatuses } from "@shared/utils";
+import "./TorrentMetaList.scss";
 
 function useDetail({ site, detailURL }) {
   const url = useMemo(() => {
@@ -36,29 +37,54 @@ function MagnetURIFetcher({ info }) {
   );
 }
 
-function TorrentMetaList({ searchResult }) {
+function TorrentMetaList({ searchResult, currentPageNo, onPage }) {
   console.log("sources :", searchResult);
-  return searchResult.map(([source, [items = [], status]]) => (
+
+  console.log(
+    "searchResult.map(([{ pages = 0 } = {}]) => pages) :",
+    searchResult.map(([{ pages = 0 } = {}]) => pages)
+  );
+  const maxPageNo = Math.max(...searchResult.map(([{ pages = 0 } = {}]) => pages));
+  const status = mergeStatuses(...searchResult.map(([, s]) => s));
+  console.log("maxPageNo :", maxPageNo);
+  return (
     <>
-      <h4>{source}</h4>
+      {searchResult.map(([{ source, items = [], pages }, status]) => (
+        <>
+          <h4>
+            {source} (pages: {pages})
+          </h4>
+          <StatusHandler status={status}>
+            {() => (
+              <ul className="meta-list">
+                {items.map(item => (
+                  <li className="meta-list-item">
+                    <h4 className="name">
+                      <a href={item.URL}>{item.name}</a>
+                    </h4>
+                    <span className="seeders">seeders: {item.seeders}</span>
+                    <span className="leechers">leechers: {item.leechers}</span>
+                    <MagnetURIFetcher info={item} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </StatusHandler>
+        </>
+      ))}
       <StatusHandler status={status}>
         {() => (
-          <ul className="meta-list">
-            {items.map(item => (
-              <li className="meta-list-item">
-                <h4 className="name">
-                  <a href={item.URL}>{item.name}</a>
-                </h4>
-                <span className="seeders">seeders: {item.seeders}</span>
-                <span className="leechers">leechers: {item.leechers}</span>
-                <MagnetURIFetcher info={item} />
+          <ul className="pagination">
+            {Array.from({ length: maxPageNo }, (_, i) => i + 1).map(i => (
+              <li className={`pagination-item ${currentPageNo === 1 ? "pagination-item-active" : ""}`}>
+                {<button onClick={() => onPage(i)}>{i}</button>}
               </li>
             ))}
           </ul>
         )}
       </StatusHandler>
     </>
-  ));
+  );
 }
 
 export default TorrentMetaList;

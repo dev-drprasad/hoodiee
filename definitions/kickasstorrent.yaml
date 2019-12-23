@@ -2,6 +2,10 @@ name: KickAss Torrents
 url: https://katcr.to
 search:
   path: /usearch/{{.query}}
+  pagination:
+    url: /usearch/{{.query}}/{{.page}}
+    total:
+      selector: .pages a:last-child
   list:
     selector: table.frontPageWidget tr
     fields:

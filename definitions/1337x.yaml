@@ -2,6 +2,14 @@ name: 1337x
 url: https://1337x.to
 search:
   path: "/search/{{.query}}/1/"
+  pagination:
+    url: /search/{{.query}}/{{.page}}/
+    total:
+      selector: .pagination > ul > li:last-child a
+      attr: href
+      transform:
+        - type: regex
+          value: /(\d+)/$
   list:
     selector: tr:has(a[href^="/torrent/"])
     fields:
@@ -18,8 +26,8 @@ search:
       url:
         selector: td[class^="coll-1"] a[href^="/torrent/"]
         attr: href
-    details:
-      fields:
-        magnet:
-          selector: td[class^="coll-1"] a[href^="/torrent/"]
-          attr: href
+  details:
+    fields:
+      magnet:
+        selector: .torrent-detail-page ul > li:first-child a[href^="magnet:"]
+        attr: href

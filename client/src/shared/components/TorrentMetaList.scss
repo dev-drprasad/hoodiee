@@ -21,3 +21,10 @@
     }
   }
 }
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  .pagination-item-active {
+  }
+}

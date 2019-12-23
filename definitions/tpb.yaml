@@ -7,6 +7,10 @@ proxies:
   - https://piratebaylive.com
 search:
   path: "/search/{{.query}}"
+  pagination:
+    url: "/search/{{.query}}/{{.page}}/99/0"
+    total:
+      selector: "#searchResult tbody tr:last-child td > a:nth-last-child(2)"
   list:
     selector: table#searchResult tr
     fields:
@@ -24,8 +28,3 @@ search:
       url:
         selector: td:nth-child(2) div.detName a
         attr: href
-    # details:
-    #   fields:
-    #     magnet:
-    #       selector: td[class^="coll-1"] a[href^="/torrent/"]
-    #       attr: href
