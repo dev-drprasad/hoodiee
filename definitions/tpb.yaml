@@ -1,6 +1,8 @@
 name: The Pirate Bay
 url: https://piratebay.live
 proxies:
+  - https://thepiratebay.org
+  - https://piratebay.live
   - https://pirateproxy.live
   - https://pirateproxy.onl
   - https://thepiratebay.zone

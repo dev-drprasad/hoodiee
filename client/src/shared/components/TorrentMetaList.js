@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useFetch } from "@shared/hooks";
 import { API_BASE_URL } from "@shared/consts";
 import StatusHandler from "./StatusHandler";
 import Spinner from "./Spinner";
-import { mergeStatuses } from "@shared/utils";
+
 import "./TorrentMetaList.scss";
+import useMultiFetch from "@shared/hooks/useMultiFetch";
 
 function useDetail({ site, detailURL }) {
   const url = useMemo(() => {
@@ -37,47 +38,61 @@ function MagnetURIFetcher({ info }) {
   );
 }
 
-function TorrentMetaList({ searchResult, currentPageNo, onPage }) {
-  console.log("sources :", searchResult);
+function useMultiTorrentSearch(searchText, pageNo, sources) {
+  const urls = useMemo(() => {
+    if (!searchText || !sources.length) return [];
 
-  console.log(
-    "searchResult.map(([{ pages = 0 } = {}]) => pages) :",
-    searchResult.map(([{ pages = 0 } = {}]) => pages)
-  );
-  const maxPageNo = Math.max(...searchResult.map(([{ pages = 0 } = {}]) => pages));
-  const status = mergeStatuses(...searchResult.map(([, s]) => s));
-  console.log("maxPageNo :", maxPageNo);
+    return sources.map(source => {
+      const url = new URL("/api/v1/search", API_BASE_URL);
+      url.searchParams.append("query", searchText);
+      url.searchParams.append("site", source);
+      url.searchParams.append("pageNo", pageNo);
+      return url.toString();
+    });
+  }, [searchText, sources, pageNo]);
+
+  return useMultiFetch(urls).map(([result, status], i) => [{ ...result, source: sources[i] }, status]);
+}
+
+function useTorrentSearch(params) {
+  const url = useMemo(() => {
+    if (!params.query || !params.source) return;
+
+    const url = new URL("/api/v1/search", API_BASE_URL);
+    url.searchParams.append("query", params.query);
+    url.searchParams.append("site", params.source);
+    url.searchParams.append("pageNo", params.pageNo);
+    return url;
+  }, [params]);
+  console.log("url :", url);
+  return useFetch(url);
+}
+
+function TorrentMetaList({ params, setPageNo }) {
+  const [searchResult, status] = useTorrentSearch(params);
+
+  useEffect(() => {
+    if (status.isSuccess) {
+      setPageNo({ source: params.source, pages: searchResult.pages });
+    }
+  }, [status, setPageNo, searchResult, params.source]);
+
   return (
     <>
-      {searchResult.map(([{ source, items = [], pages }, status]) => (
-        <>
-          <h4>
-            {source} (pages: {pages})
-          </h4>
-          <StatusHandler status={status}>
-            {() => (
-              <ul className="meta-list">
-                {items.map(item => (
-                  <li className="meta-list-item">
-                    <h4 className="name">
-                      <a href={item.URL}>{item.name}</a>
-                    </h4>
-                    <span className="seeders">seeders: {item.seeders}</span>
-                    <span className="leechers">leechers: {item.leechers}</span>
-                    <MagnetURIFetcher info={item} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </StatusHandler>
-        </>
-      ))}
+      <h4>
+        {params.source} (pages: {(searchResult || {}).pages})
+      </h4>
       <StatusHandler status={status}>
         {() => (
-          <ul className="pagination">
-            {Array.from({ length: maxPageNo }, (_, i) => i + 1).map(i => (
-              <li className={`pagination-item ${currentPageNo === 1 ? "pagination-item-active" : ""}`}>
-                {<button onClick={() => onPage(i)}>{i}</button>}
+          <ul className="meta-list">
+            {searchResult.items.map(item => (
+              <li className="meta-list-item">
+                <h4 className="name">
+                  <a href={item.URL}>{item.name}</a>
+                </h4>
+                <span className="seeders">seeders: {item.seeders}</span>
+                <span className="leechers">leechers: {item.leechers}</span>
+                <MagnetURIFetcher info={item} />
               </li>
             ))}
           </ul>

@@ -1,5 +1,69 @@
+$border: 2px;
+$height: 40px;
+$from-color: #fc5c7d;
+$to-color: #6a82fb;
 .search-form {
   display: grid;
   width: 100%;
-  grid-template-columns: auto 50px;
+  grid-template-columns: 50px auto 40px;
+  position: relative;
+  border-radius: 9999999px;
+  background-clip: padding-box; /* !importanté */
+  height: $height;
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: -1;
+    margin: -$border; /* !importanté */
+    border-radius: inherit; /* !importanté */
+    background: linear-gradient(to right, $from-color, $to-color);
+  }
+
+  > * {
+    display: flex;
+    justify-content: center;
+  }
+
+  button.show-sources {
+    border-top-left-radius: inherit;
+    border-bottom-left-radius: inherit;
+    color: $from-color;
+    font-size: 0.8em;
+  }
+
+  button[type="submit"] {
+    border-top-right-radius: inherit;
+    border-bottom-right-radius: inherit;
+    color: $to-color;
+  }
+
+  .source-select-dropdown {
+    position: absolute;
+    top: #{$height + $border + 2px};
+    left: 0;
+    padding: 16px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    background-color: white;
+
+    li {
+      label {
+        display: flex;
+        align-items: center;
+        input {
+          margin-right: 16px;
+        }
+      }
+    }
+  }
 }
+
+// https://css-tricks.com/gradient-borders-in-css/
+// https://uigradients.com/#SublimeVivid
+// https://uigradients.com/#JShine
+// https://uigradients.com/#SublimeLight

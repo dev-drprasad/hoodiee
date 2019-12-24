@@ -46,7 +46,7 @@ export default function StatusHandler({
   } else if (status.isSuccess && !hasData) {
     fallback = "No data available.";
   }
-  console.log("status :", status);
+
   return (
     <div
       style={{

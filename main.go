@@ -194,11 +194,11 @@ func search(w http.ResponseWriter, r *http.Request) {
 	pageNo := r.URL.Query().Get("pageNo")
 
 	if site == "" {
-		utils.Respond(w, http.StatusInternalServerError, nil, errors.New("Missing 'site' in queryparams"))
+		utils.Respond(w, http.StatusBadRequest, nil, errors.New("Missing 'site' in queryparams"))
 		return
 	}
 	if query == "" {
-		utils.Respond(w, http.StatusInternalServerError, nil, errors.New("Missing 'query' in queryparams"))
+		utils.Respond(w, http.StatusBadRequest, nil, errors.New("Missing 'query' in queryparams"))
 		return
 	}
 
@@ -230,7 +230,13 @@ func search(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	router := mux.NewRouter().StrictSlash(true)
+	err := scraper.Init()
+	if err != nil {
+		log.Println("Error in initializing scraper")
+		log.Println(err)
+	}
+
+	router := mux.NewRouter()
 
 	// router.HandleFunc("/mag2tor", handleMag2Tor).Methods("GET")
 	router.HandleFunc("/api/v1/search", search).Methods("GET")

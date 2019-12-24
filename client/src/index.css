@@ -92,6 +92,7 @@ video {
   font-size: 100%;
   font: inherit;
   vertical-align: baseline;
+  outline: none;
 }
 
 *,
@@ -118,6 +119,15 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
 }
 
+button {
+  cursor: pointer;
+}
+
 .centered-text {
   text-align: center;
+}
+
+.hide {
+  visibility: hidden;
+  height: 0;
 }

@@ -1,42 +1,83 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useContext, useCallback, useReducer, useEffect } from "react";
 
 import Search from "@shared/components/Search";
 import TorrentMetaList from "@shared/components/TorrentMetaList";
-import { API_BASE_URL } from "@shared/consts";
-import useMultiFetch from "@shared/hooks/useMultiFetch";
+import StatusHandler from "@shared/components/StatusHandler";
+import { mergeStatuses } from "@shared/utils";
 
 import "./App.scss";
 
-function useTorrentSearch(searchText, pageNo, sources) {
-  const urls = useMemo(() => {
-    if (!searchText || !sources.length) return [];
+const initState = {
+  searchText: "",
+  pageNo: 1,
+  sources: [],
+  // Adding new property which is not used in TorrentMetaList may cause problem
+};
 
-    return sources.map(source => {
-      const url = new URL("/api/v1/search", API_BASE_URL);
-      url.searchParams.append("query", searchText);
-      url.searchParams.append("site", source);
-      url.searchParams.append("pageNo", pageNo);
-      return url.toString();
-    });
-  }, [searchText, sources, pageNo]);
+const sources = [
+  { id: "tpb", name: "The Pirate Bay" },
+  { id: "kickasstorrent", name: "KickAssTorrent" },
+  { id: "1337x", name: "1337x" },
+];
 
-  return useMultiFetch(urls).map(([result, status], i) => [{ ...result, source: sources[i] }, status]);
+function reducer(state, action) {
+  switch (action.type) {
+    case "SET_SEARCH_TEXT":
+      return { ...state, searchText: action.payload };
+    case "SET_PAGE_NO":
+      return { ...state, pageNo: action.payload };
+    case "SET_SOURCES":
+      return { ...state, sources: action.payload };
+    case "SET_STATE":
+      return { ...state, ...action.payload };
+    default:
+      return state;
+  }
 }
 
 function App() {
-  const [searchText, setSearchText] = useState("");
-  const [selectedSources, setSelectedSources] = useState(["tpb", "kickasstorrent", "1337x"]);
-  const [currentPageNo, setCurrentPageNo] = useState(1);
-  const searchResult = useTorrentSearch(searchText, currentPageNo, selectedSources);
-  console.log("searchResult :", searchResult);
+  const [state, dispatch] = useReducer(reducer, initState);
+  const [maxPages, setMaxPages] = useState([]);
+
+  const updateMaxPage = maxPage => {
+    if (!maxPages.find(o => o.source === maxPage.source)) {
+      setMaxPages([...maxPages, maxPage]);
+    }
+  };
+
+  const maxPageNo = maxPages.length > 0 ? Math.max(...maxPages.map(o => o.pages)) : 0;
+  console.log("state :", state);
+  console.log("maxPageNo :", maxPageNo);
+
+  const params = useMemo(() => state.sources.map(s => ({ source: s, pageNo: state.pageNo, query: state.searchText })), [
+    state,
+  ]);
+
+  useEffect(() => {
+    setMaxPages([]);
+  }, [params]);
+
+  console.log("params :", params);
+
   return (
     <div className="app">
-      <Search onSearch={setSearchText} />
-      <section>
-        {searchResult.length > 0 && (
-          <TorrentMetaList searchResult={searchResult} currentPageNo={currentPageNo} onPage={setCurrentPageNo} />
-        )}
-      </section>
+      <Search onSearch={payload => dispatch({ type: "SET_STATE", payload })} sources={sources} />
+      {state.searchText && (
+        <section>
+          {params.map(params => (
+            <TorrentMetaList key={params.source} params={params} setPageNo={updateMaxPage} />
+          ))}
+        </section>
+      )}
+      {maxPageNo > 0 && (
+        <ul className="pagination">
+          {Array.from({ length: maxPageNo }, (_, i) => i + 1).map(i => (
+            <li key={i} className={`pagination-item ${state.pageNo === 1 ? "pagination-item-active" : ""}`}>
+              {<button onClick={() => dispatch({ type: "SET_PAGE_NO", payload: i })}>{i}</button>}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

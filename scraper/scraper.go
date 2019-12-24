@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http/cookiejar"
 	"net/url"
 	"reflect"
 	"regexp"
@@ -72,11 +73,28 @@ type Definition struct {
 	} `yaml:"search"`
 }
 
+var jar *cookiejar.Jar
+
+func Init() error {
+	var err error
+	if jar == nil {
+		jar, err = cookiejar.New(nil)
+	}
+	return err
+}
+
 func NewScrapeResult() ScrapeResult {
 	return ScrapeResult{
 		Pages: 1,
 		Items: []TorrentInfo{},
 	}
+}
+
+func NewScraper() *colly.Collector {
+	scraper := colly.NewCollector()
+	scraper.SetCookieJar(jar)
+	scraper.UserAgent = userAgent
+	return scraper
 }
 
 func ScrapeList(config Definition, listURL string) (ScrapeResult, error) {
@@ -85,8 +103,7 @@ func ScrapeList(config Definition, listURL string) (ScrapeResult, error) {
 	var err error
 	result := NewScrapeResult()
 
-	scraper := colly.NewCollector()
-	scraper.UserAgent = userAgent
+	scraper := NewScraper()
 
 	scraper.OnHTML("body", func(e *colly.HTMLElement) {
 		e.ForEach(config.Search.List.Selector, func(i int, e *colly.HTMLElement) {
@@ -177,6 +194,7 @@ func ScrapeList(config Definition, listURL string) (ScrapeResult, error) {
 		r.Headers.Set("Accept", "text/html")
 		r.Headers.Set("Accept-Encoding", "gzip")
 		r.Headers.Set("Host", u.Host)
+		log.Printf("Cookie: %s", r.Headers.Get("Cookie"))
 	})
 
 	scraper.OnError(func(r *colly.Response, e error) {
@@ -197,8 +215,7 @@ func ScrapeDetail(config Definition, detailURL string) (*TorrentInfo, error) {
 		return nil, errors.New("No Fields defined in config file")
 	}
 
-	scraper := colly.NewCollector()
-	scraper.UserAgent = userAgent
+	scraper := NewScraper()
 
 	var err error
 	scraper.OnRequest(func(r *colly.Request) {
