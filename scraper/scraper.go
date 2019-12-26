@@ -162,7 +162,7 @@ func ScrapeList(config Definition, listURL string) (ScrapeResult, error) {
 			} else {
 				pagesStr = e.ChildText(config.Search.Pagination.Total.Selector)
 			}
-			log.Printf("%s", pagesStr)
+			log.Printf("Total num of pages: %s", pagesStr)
 
 			if len(config.Search.Pagination.Total.Transform) > 0 {
 				transforms := config.Search.Pagination.Total.Transform
@@ -171,7 +171,15 @@ func ScrapeList(config Definition, listURL string) (ScrapeResult, error) {
 					if transform.Type == "regex" {
 						regx := regexp.MustCompile(transform.Value)
 						match := regx.FindStringSubmatch(pagesStr)
-						if len(match) > 0 {
+						if len(match) == 0 {
+							log.Printf("No match found for pages=%s with given regex=%s", pagesStr, transform.Value)
+							return
+						}
+						if len(match) == 1 {
+							log.Printf("No submatch found for pages=%s with given regex=%s", pagesStr, transform.Value)
+							return
+						}
+						if len(match) > 1 {
 							pagesStr = match[1]
 						}
 					}

@@ -1,5 +1,41 @@
+@import "@shared/scss/gradient-box";
+@import "@shared/scss/variables.scss";
+
 .app {
   max-width: 968px;
   margin: 0 auto;
   padding: 16px;
+}
+
+.rc-pagination {
+  font-family: inherit;
+  display: flex;
+  justify-content: center;
+  .rc-pagination-item,
+  .rc-pagination-next,
+  .rc-pagination-prev {
+    border: $border solid white;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background-color: white;
+    a {
+      color: $font-color;
+    }
+    &:hover {
+      border: $border solid transparent;
+      @include gradient-box;
+      a {
+        color: $font-color;
+      }
+    }
+    &.rc-pagination-item-active {
+      background-color: white;
+      border: $border solid transparent;
+      @include gradient-box;
+    }
+  }
+  .rc-pagination-jump-next:hover:after {
+    color: $font-color;
+  }
 }

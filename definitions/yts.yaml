@@ -1,0 +1,26 @@
+name: YIFY Movies
+url: https://yts.lt
+search:
+  path: /browse-movies/{{.query}}/all/all/0/seeds
+  pagination:
+    url: /browse-movies/{{.query}}/all/all/0/seeds?page={{.page}}
+    total:
+      selector: .hidden-lg > .tsc_pagination > li.pagination-bordered
+      transform:
+        - type: regex
+          value: \d+\sof\s(\d+)$
+  list:
+    selector: .row .browse-movie-wrap
+    fields:
+      name:
+        selector: .browse-movie-bottom a
+      url:
+        selector: .browse-movie-bottom a
+        attr: href
+  details:
+    fields:
+      name:
+        selector: h1
+      magnet:
+        selector: "#modal-quality-720p ~ a.magnet"
+        attr: href

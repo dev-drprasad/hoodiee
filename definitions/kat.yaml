@@ -1,4 +1,4 @@
-name: KickAss Torrents
+name: Kickass Torrents
 url: https://katcr.to
 search:
   path: /usearch/{{.query}}

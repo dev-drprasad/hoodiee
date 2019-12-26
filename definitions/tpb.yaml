@@ -14,7 +14,7 @@ search:
     total:
       selector: "#searchResult tbody tr:last-child td > a:nth-last-child(2)"
   list:
-    selector: table#searchResult tr
+    selector: table#searchResult tr:not(.header)
     fields:
       magnet:
         selector: td:nth-child(2) a[href^="magnet:"]

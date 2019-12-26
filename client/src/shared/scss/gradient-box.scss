@@ -1,0 +1,33 @@
+$border: 2px;
+$height: 40px;
+$from-color: #fc5c7d;
+$to-color: #6a82fb;
+
+@mixin gradient-box {
+  position: relative;
+  background-clip: padding-box; /* !importanté */
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: -1;
+    margin: -$border; /* !importanté */
+    border-radius: inherit; /* !importanté */
+    background: linear-gradient(60deg, $from-color, $to-color);
+  }
+}
+
+.gradient-box {
+  @include gradient-box;
+}
+
+.gradient-on-hover {
+  border: $border solid transparent;
+  &:hover {
+    @include gradient-box;
+  }
+}

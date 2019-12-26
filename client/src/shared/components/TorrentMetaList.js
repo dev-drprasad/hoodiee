@@ -1,11 +1,14 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useContext } from "react";
 import { useFetch } from "@shared/hooks";
 import { API_BASE_URL } from "@shared/consts";
 import StatusHandler from "./StatusHandler";
 import Spinner from "./Spinner";
+import { ReactComponent as MagnetIcon } from "@shared/icons/magnet.svg";
+import { ReactComponent as ArrowDownIcon } from "@shared/icons/arrow-down.svg";
+import SourceMapContext from "@shared/contexts/SourceMap";
+import AnchorBlank from "./AnchorBlank";
 
 import "./TorrentMetaList.scss";
-import useMultiFetch from "@shared/hooks/useMultiFetch";
 
 function useDetail({ site, detailURL }) {
   const url = useMemo(() => {
@@ -30,28 +33,21 @@ function MagnetURIFetcher({ info }) {
       {infoStatus.code === "LOADING" ? (
         <Spinner />
       ) : magnetURI ? (
-        <a href={magnetURI}>magnet</a>
+        <AnchorBlank href={magnetURI} title="magnet">
+          <MagnetIcon />
+        </AnchorBlank>
       ) : (
-        <button onClick={() => setProps({ site: info.source, detailURL: info.URL })}>fetch magnet</button>
+        <button
+          className="fetch-magnet-button"
+          onClick={() => setProps({ site: info.source, detailURL: info.URL })}
+          title="click to fetch magnet"
+        >
+          <MagnetIcon />
+          <ArrowDownIcon className="arrow-down-icon" />
+        </button>
       )}
     </span>
   );
-}
-
-function useMultiTorrentSearch(searchText, pageNo, sources) {
-  const urls = useMemo(() => {
-    if (!searchText || !sources.length) return [];
-
-    return sources.map(source => {
-      const url = new URL("/api/v1/search", API_BASE_URL);
-      url.searchParams.append("query", searchText);
-      url.searchParams.append("site", source);
-      url.searchParams.append("pageNo", pageNo);
-      return url.toString();
-    });
-  }, [searchText, sources, pageNo]);
-
-  return useMultiFetch(urls).map(([result, status], i) => [{ ...result, source: sources[i] }, status]);
 }
 
 function useTorrentSearch(params) {
@@ -61,34 +57,38 @@ function useTorrentSearch(params) {
     const url = new URL("/api/v1/search", API_BASE_URL);
     url.searchParams.append("query", params.query);
     url.searchParams.append("site", params.source);
-    url.searchParams.append("pageNo", params.pageNo);
+    if (params.pageNo > 1) url.searchParams.append("pageNo", params.pageNo);
     return url;
   }, [params]);
   console.log("url :", url);
   return useFetch(url);
 }
 
-function TorrentMetaList({ params, setPageNo }) {
+function TorrentMetaList({ params, setTotalPageCount }) {
   const [searchResult, status] = useTorrentSearch(params);
+  const sources = useContext(SourceMapContext);
 
   useEffect(() => {
     if (status.isSuccess) {
-      setPageNo({ source: params.source, pages: searchResult.pages });
+      setTotalPageCount({ source: params.source, pages: searchResult.pages });
     }
-  }, [status, setPageNo, searchResult, params.source]);
+  }, [status, setTotalPageCount, searchResult, params.source]);
 
   return (
     <>
-      <h4>
-        {params.source} (pages: {(searchResult || {}).pages})
-      </h4>
+      <div className="meta-list-header">
+        <h3>{sources.find(s => s.id === params.source).name}</h3>
+        <span>
+          {params.pageNo} of {(searchResult || {}).pages}
+        </span>
+      </div>
       <StatusHandler status={status}>
         {() => (
           <ul className="meta-list">
             {searchResult.items.map(item => (
-              <li className="meta-list-item">
+              <li className="gradient-on-hover meta-list-item">
                 <h4 className="name">
-                  <a href={item.URL}>{item.name}</a>
+                  <AnchorBlank href={item.URL}>{item.name}</AnchorBlank>
                 </h4>
                 <span className="seeders">seeders: {item.seeders}</span>
                 <span className="leechers">leechers: {item.leechers}</span>

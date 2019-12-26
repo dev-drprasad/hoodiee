@@ -1,4 +1,8 @@
 import React from "react";
-
-const Spinner = () => <div className="spinner">loading...</div>;
+import { ReactComponent as LoaderIcon } from "@shared/icons/loader.svg";
+const Spinner = () => (
+  <div className="spinner">
+    <LoaderIcon />
+  </div>
+);
 export default Spinner;

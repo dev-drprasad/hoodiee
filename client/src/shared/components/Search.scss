@@ -1,15 +1,9 @@
-$border: 2px;
-$height: 40px;
-$from-color: #fc5c7d;
-$to-color: #6a82fb;
-.search-form {
-  display: grid;
-  width: 100%;
-  grid-template-columns: 50px auto 40px;
+@import "@shared/scss/variables.scss";
+
+.gradient-box {
   position: relative;
-  border-radius: 9999999px;
   background-clip: padding-box; /* !importanté */
-  height: $height;
+
   &::before {
     content: "";
     position: absolute;
@@ -22,6 +16,15 @@ $to-color: #6a82fb;
     border-radius: inherit; /* !importanté */
     background: linear-gradient(to right, $from-color, $to-color);
   }
+}
+
+.search-form {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 50px auto 40px;
+  position: relative;
+  border-radius: 9999999px;
+  height: $height;
 
   > * {
     display: flex;

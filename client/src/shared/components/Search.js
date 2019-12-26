@@ -1,10 +1,12 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useContext } from "react";
 import { ReactComponent as SearchIcon } from "@shared/icons/search.svg";
 import { ReactComponent as CaretDownIcon } from "@shared/icons/caret-down.svg";
 import { useHideOnOutsideClick } from "@shared/hooks";
+import SourceMapContext from "@shared/contexts/SourceMap";
 import "./Search.scss";
 
-function Search({ onSearch, sources }) {
+function Search({ onSearch }) {
+  const sources = useContext(SourceMapContext);
   const inputRef = useRef();
   const sourceDropdownRef = useRef();
   const [shouldShowSourceDropdown, setShouldShowSourceDropdown] = useState(false);
@@ -27,7 +29,7 @@ function Search({ onSearch, sources }) {
   useHideOnOutsideClick(sourceDropdownRef, hideSourceSelectDropdown);
 
   return (
-    <form className="search-form" onSubmit={handleSubmit}>
+    <form className="gradient-box search-form" onSubmit={handleSubmit}>
       <button className="show-sources" type="button" onClick={showSourceSelectDropdown}>
         <CaretDownIcon />
       </button>

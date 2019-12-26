@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/dev-drprasad/rest-api/scraper"
@@ -120,21 +121,25 @@ func homeLink(w http.ResponseWriter, r *http.Request) {
 
 // func (f )
 
-func getSiteDefinition(site string) *scraper.Definition {
-	f, err := ioutil.ReadFile("definitions/" + site + ".yaml")
+func loadDefinitionFromFile(filename string) *scraper.Definition {
+	f, err := ioutil.ReadFile(path.Join("definitions", filename))
 	if err != nil {
-		log.Printf("error reading definition %s: %s", site, err)
+		log.Printf("Failed to read definition from file=%s error=%s", filename, err)
 		return nil
 	}
 	d := &scraper.Definition{}
 	err = yaml.Unmarshal(f, &d)
 	if err != nil {
-		log.Fatalf("Unmarshal: %v", err)
+		log.Fatalf("Failed to Unmarshal file=%s error=%v", filename, err)
 		return nil
 	}
-	d.ID = site
-	log.Printf("%v", d)
+	d.ID = strings.TrimSuffix(filename, path.Ext(filename))
+
 	return d
+}
+
+func getSiteDefinition(site string) *scraper.Definition {
+	return loadDefinitionFromFile(site + ".yaml")
 }
 
 func handleListScrape(w http.ResponseWriter, r *http.Request) {
@@ -229,6 +234,31 @@ func search(w http.ResponseWriter, r *http.Request) {
 	utils.Respond(w, http.StatusOK, til, nil)
 }
 
+func handleSourceList(w http.ResponseWriter, r *http.Request) {
+	defRoot := "definitions"
+	files, err := ioutil.ReadDir(defRoot)
+	if err != nil {
+		log.Printf("Failed to read definitions directory Error=%s", err.Error())
+		utils.Respond(w, http.StatusInternalServerError, nil, err)
+		return
+	}
+
+	sources := []map[string]string{}
+	for _, f := range files {
+		if !f.IsDir() {
+			def := loadDefinitionFromFile(f.Name())
+			if def == nil {
+				log.Printf("Failed to get definition for source=%s", f.Name())
+				continue
+			}
+
+			sources = append(sources, map[string]string{"id": def.ID, "name": def.Name})
+		}
+	}
+
+	utils.Respond(w, http.StatusOK, sources, nil)
+}
+
 func main() {
 	err := scraper.Init()
 	if err != nil {
@@ -242,6 +272,7 @@ func main() {
 	router.HandleFunc("/api/v1/search", search).Methods("GET")
 	router.HandleFunc("/api/v1/detail", handleDetailScrape).Methods("GET")
 	router.HandleFunc("/api/v1/list", handleListScrape).Methods("GET")
+	router.HandleFunc("/api/v1/sources", handleSourceList).Methods("GET")
 
 	srv := &http.Server{
 		Addr: "0.0.0.0:8080",
