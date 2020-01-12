@@ -1,12 +1,15 @@
 package main
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"strings"
 	"time"
@@ -16,6 +19,34 @@ import (
 	"github.com/gorilla/mux"
 	"gopkg.in/yaml.v2"
 )
+
+type handler func(w http.ResponseWriter, r *http.Request)
+
+func basicAuth(pass handler) handler {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		auth := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
+
+		if len(auth) != 2 || auth[0] != "Bearer" {
+			http.Error(w, "authorization failed", http.StatusUnauthorized)
+			return
+		}
+
+		h := sha1.New()
+		h.Write([]byte(os.Getenv("HOODIE_PASSWORD")))
+		sha1Password := hex.EncodeToString(h.Sum(nil))
+
+		// Compare the stored hashed password, with the hashed version of the password that was received
+		if sha1Password != auth[1] {
+			// If the two passwords don't match, return a 401 status
+			http.Error(w, "authorization failed", http.StatusUnauthorized)
+			return
+		}
+
+		pass(w, r)
+	}
+}
 
 func homeLink(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Welcome home!")
@@ -269,10 +300,10 @@ func main() {
 	router := mux.NewRouter()
 
 	// router.HandleFunc("/mag2tor", handleMag2Tor).Methods("GET")
-	router.HandleFunc("/api/v1/search", search).Methods("GET")
-	router.HandleFunc("/api/v1/detail", handleDetailScrape).Methods("GET")
-	router.HandleFunc("/api/v1/list", handleListScrape).Methods("GET")
-	router.HandleFunc("/api/v1/sources", handleSourceList).Methods("GET")
+	router.HandleFunc("/api/v1/search", basicAuth(search)).Methods("GET")
+	router.HandleFunc("/api/v1/detail", basicAuth(handleDetailScrape)).Methods("GET")
+	router.HandleFunc("/api/v1/list", basicAuth(handleListScrape)).Methods("GET")
+	router.HandleFunc("/api/v1/sources", basicAuth(handleSourceList)).Methods("GET")
 
 	srv := &http.Server{
 		Addr: "0.0.0.0:8080",

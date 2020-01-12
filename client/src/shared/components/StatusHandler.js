@@ -17,6 +17,7 @@ import Spinner from "./Spinner";
  */
 export default function StatusHandler({
   status,
+  styles = {},
   data = null,
   hasData: overriddenHasData,
   height,
@@ -49,6 +50,7 @@ export default function StatusHandler({
 
   return (
     <div
+      className="status-handler-fallback"
       style={{
         display: "flex",
         justifyContent: "center",
