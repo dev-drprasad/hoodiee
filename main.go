@@ -36,7 +36,7 @@ func basicAuth(pass handler) handler {
 		h := sha1.New()
 		h.Write([]byte(os.Getenv("HOODIE_PASSWORD")))
 		sha1Password := hex.EncodeToString(h.Sum(nil))
-
+		fmt.Println(sha1Password)
 		// Compare the stored hashed password, with the hashed version of the password that was received
 		if sha1Password != auth[1] {
 			// If the two passwords don't match, return a 401 status
@@ -304,6 +304,11 @@ func main() {
 	router.HandleFunc("/api/v1/detail", basicAuth(handleDetailScrape)).Methods("GET")
 	router.HandleFunc("/api/v1/list", basicAuth(handleListScrape)).Methods("GET")
 	router.HandleFunc("/api/v1/sources", basicAuth(handleSourceList)).Methods("GET")
+
+	router.PathPrefix("/").Handler(http.FileServer(http.Dir("./client/")))
+	// router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	// 	http.ServeFile(w, r, "./index.html")
+	// })
 
 	srv := &http.Server{
 		Addr: "0.0.0.0:8080",
