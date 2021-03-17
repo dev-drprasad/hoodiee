@@ -1,0 +1,18 @@
+@import "@shared/scss/variables.scss";
+@import "@shared/scss/round-border.scss";
+@import "@shared/scss/gradient-box.scss";
+
+.login-form {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  @include gradient-background;
+
+  input[type="password"] {
+    height: $height;
+    min-width: 320px;
+    padding: $gap;
+    @include round-border;
+  }
+}

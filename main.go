@@ -14,11 +14,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dev-drprasad/rest-api/auth"
 	"github.com/dev-drprasad/rest-api/scraper"
 	"github.com/dev-drprasad/rest-api/utils"
 	"github.com/gorilla/mux"
 	"gopkg.in/yaml.v2"
 )
+
+const salt = "salt"
 
 type handler func(w http.ResponseWriter, r *http.Request)
 
@@ -26,9 +29,9 @@ func basicAuth(pass handler) handler {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		auth := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
+		authHeader := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
 
-		if len(auth) != 2 || auth[0] != "Bearer" {
+		if len(authHeader) != 2 || authHeader[0] != "Bearer" {
 			http.Error(w, "authorization failed", http.StatusUnauthorized)
 			return
 		}
@@ -37,14 +40,25 @@ func basicAuth(pass handler) handler {
 		h.Write([]byte(os.Getenv("HOODIE_PASSWORD")))
 		sha1Password := hex.EncodeToString(h.Sum(nil))
 		fmt.Println(sha1Password)
-		// Compare the stored hashed password, with the hashed version of the password that was received
-		if sha1Password != auth[1] {
+		hash := auth.GenerateBcryptHash(salt, os.Getenv("HOODIE_PASSWORD"))
+		if hash != authHeader[1] {
 			// If the two passwords don't match, return a 401 status
 			http.Error(w, "authorization failed", http.StatusUnauthorized)
 			return
 		}
 
 		pass(w, r)
+	}
+}
+
+func login(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		log.Println(err)
+	}
+	password := r.Form.Get("password")
+	if password == os.Getenv("HOODIE_PASSWORD") {
+		hash := auth.GenerateBcryptHash(salt, os.Getenv("HOODIE_PASSWORD"))
+		utils.Respond(w, http.StatusOK, map[string]string{"token": hash}, nil)
 	}
 }
 
@@ -304,6 +318,7 @@ func main() {
 	router.HandleFunc("/api/v1/detail", basicAuth(handleDetailScrape)).Methods("GET")
 	router.HandleFunc("/api/v1/list", basicAuth(handleListScrape)).Methods("GET")
 	router.HandleFunc("/api/v1/sources", basicAuth(handleSourceList)).Methods("GET")
+	router.HandleFunc("/api/v1/login", login).Methods("POST")
 
 	router.PathPrefix("/").Handler(http.FileServer(http.Dir("./client/")))
 	// router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

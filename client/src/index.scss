@@ -114,6 +114,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background-color: #f1f3f9;
   color: #343237;
+  height: 100vh;
 }
 
 code {
@@ -135,4 +136,8 @@ button {
 .hide {
   visibility: hidden;
   height: 0;
+}
+
+#root {
+  height: 100%;
 }

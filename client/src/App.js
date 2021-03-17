@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useReducer, useEffect } from "react";
 import Pagination from "rc-pagination";
+import { Router } from "@reach/router";
 import Search from "@shared/components/Search";
 import TorrentMetaList from "@shared/components/TorrentMetaList";
 import StatusHandler from "@shared/components/StatusHandler";
@@ -9,6 +10,9 @@ import { useFetch } from "@shared/hooks";
 import "rc-pagination/assets/index.css";
 
 import "./App.scss";
+import Login from "pages/Login";
+import ProtectedComponent from "@shared/components/ProtectedComponent";
+import AuthContext from "@shared/contexts/Auth";
 
 const initState = {
   searchText: "",
@@ -37,10 +41,10 @@ function reducer(state, action) {
   }
 }
 
-function App() {
+function Dashboard() {
   const [state, dispatch] = useReducer(reducer, initState);
-  const [maxPages, setMaxPages] = useState([]);
   const [sources, sourcesStatus] = useSources();
+  const [maxPages, setMaxPages] = useState([]);
 
   const updateMaxPage = maxPage => {
     if (!maxPages.find(o => o.source === maxPage.source)) {
@@ -63,10 +67,6 @@ function App() {
   useEffect(() => {
     setMaxPages([]);
   }, [state.searchText, state.sources]);
-
-  console.log("params :", params);
-  console.log("state.pageNo :", state.pageNo);
-
   return (
     <StatusHandler status={sourcesStatus}>
       {() => (
@@ -92,6 +92,22 @@ function App() {
         </SourceMapProvider>
       )}
     </StatusHandler>
+  );
+}
+
+function NotFound() {
+  return "not found";
+}
+
+function App() {
+  return (
+    <AuthContext.Provider value={{ loggedIn: false }}>
+      <Router id="router">
+        <Login path="login" />
+        <ProtectedComponent component={Dashboard} path="/" />
+        <NotFound default />
+      </Router>
+    </AuthContext.Provider>
   );
 }
 

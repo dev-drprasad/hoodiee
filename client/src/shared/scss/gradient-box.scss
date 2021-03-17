@@ -3,6 +3,10 @@ $height: 40px;
 $from-color: #fc5c7d;
 $to-color: #6a82fb;
 
+@mixin gradient-background {
+  background: linear-gradient(60deg, $from-color, $to-color);
+}
+
 @mixin gradient-box {
   position: relative;
   background-clip: padding-box; /* !importanté */
@@ -17,7 +21,7 @@ $to-color: #6a82fb;
     z-index: -1;
     margin: -$border; /* !importanté */
     border-radius: inherit; /* !importanté */
-    background: linear-gradient(60deg, $from-color, $to-color);
+    @include gradient-background;
   }
 }
 
